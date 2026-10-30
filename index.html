@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SORTMARK | Bus Servo Actuator (Precision Geared Mechanism)</title>
+  <meta name="description" content="3D Precision Bus Servo Actuator Simulation by SORTMARK.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-deep: #080705;
+      --bg-panel: rgba(18, 14, 10, 0.94);
+      --border-dim: rgba(255,255,255,0.08);
+      --border-focus: rgba(245,158,11,0.5);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent-amber: #f59e0b;
+      --accent-orange: #ea580c;
+      --accent-cyan: #38bdf8;
+      --accent-green: #22d3a0;
+      --accent-purple: #a855f7;
+      --accent-blue: #3b82f6;
+    }
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+      user-select: none;
+    }
+    #viewport-container {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(ellipse at 50% 30%, #201710 0%, #080705 100%);
+    }
+    #canvas3d { width: 100%; height: 100%; display: block; }
+
+    /* Top Toolbar */
+    .top-toolbar {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-dim);
+      padding: 8px 12px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      z-index: 30;
+      max-width: calc(100vw - 380px);
+    }
+    .tb-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      font-size: 0.84rem;
+      font-weight: 700;
+      background: linear-gradient(120deg, #f59e0b 0%, #fb923c 60%, #f43f5e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+    .toolbar-sep { width: 1px; height: 22px; background: var(--border-dim); flex-shrink: 0; }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-dim);
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .nav-link:hover {
+      background: rgba(245,158,11,0.15);
+      border-color: var(--accent-amber);
+      color: var(--accent-amber);
+    }
+    .nav-link.switch-joint {
+      background: rgba(56,189,248,0.12);
+      border-color: rgba(56,189,248,0.4);
+      color: #38bdf8;
+    }
+    .nav-link.switch-joint:hover {
+      background: rgba(56,189,248,0.25);
+      border-color: #38bdf8;
+      color: #fff;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      background: rgba(0,0,0,0.4);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border-dim);
+      gap: 2px;
+    }
+    .ctrl-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .ctrl-btn:hover { color: #fff; }
+    .ctrl-btn.active {
+      background: linear-gradient(135deg, rgba(245,158,11,0.25) 0%, rgba(234,88,12,0.25) 100%);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245,158,11,0.5);
+    }
+
+    /* Specs HUD */
+    .specs-card {
+      position: absolute;
+      top: 132px;
+      left: 14px;
+      width: 310px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 25;
+      font-size: 0.75rem;
+    }
+    .specs-header {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-dim);
+    }
+    .specs-title { font-weight: 700; color: #fff; font-size: 0.82rem; }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .badge-amber { background: rgba(245,158,11,0.15); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.3); }
+    .badge-cyan { background: rgba(56,189,248,0.15); color: var(--accent-cyan); border: 1px solid rgba(56,189,248,0.3); }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      color: var(--text-secondary);
+    }
+    .spec-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Exploded Slider Bar */
+    .exploded-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-panel);
+      backdrop-filter: blur(15px);
+      border: 1px solid var(--border-dim);
+      padding: 8px 16px;
+      border-radius: 30px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 25;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    }
+    .exploded-bar.show { display: flex; }
+    .slider {
+      -webkit-appearance: none;
+      width: 200px;
+      height: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-amber);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--accent-amber);
+    }
+
+    /* View Controls */
+    .view-controls {
+      position: absolute;
+      bottom: 24px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 25;
+    }
+    .vc-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .vc-btn:hover {
+      background: rgba(245,158,11,0.2);
+      border-color: var(--accent-amber);
+      color: var(--accent-amber);
+    }
+
+    /* Right Sidebar */
+    .sidebar {
+      width: 420px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-dim);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sidebar-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .sidebar-content::-webkit-scrollbar { width: 5px; }
+    .sidebar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+    /* Concept Card */
+    .concept-card {
+      background: rgba(30, 20, 10, 0.7);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      position: relative;
+    }
+    .concept-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent-amber);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .concept-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    /* Straddle Mount Flow Card */
+    .flow-card {
+      background: rgba(10, 15, 25, 0.85);
+      border: 1px solid var(--border-dim);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .flow-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .flow-steps {
+      display: grid;
+      grid-template-columns: 1fr auto 1.4fr auto 1fr;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.68rem;
+      text-align: center;
+    }
+    .flow-box {
+      padding: 8px 6px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-dim);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .flow-box.active-side {
+      border-color: rgba(245,158,11,0.5);
+      background: rgba(245,158,11,0.08);
+      color: var(--accent-amber);
+    }
+    .flow-box.center {
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.02);
+    }
+    .flow-box.passive-side {
+      border-color: rgba(56,189,248,0.5);
+      background: rgba(56,189,248,0.08);
+      color: var(--accent-cyan);
+    }
+    .flow-arrow { color: var(--text-secondary); font-size: 0.8rem; }
+
+    /* Component List */
+    .comp-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .comp-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .comp-item:hover, .comp-item.active {
+      background: rgba(245,158,11,0.08);
+      border-color: var(--accent-amber);
+      transform: translateX(3px);
+    }
+    .comp-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .comp-name {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .comp-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .comp-sub {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Detail Inspector */
+    .inspector-card {
+      background: rgba(20, 15, 10, 0.9);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .inspector-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .inspector-field {
+      margin-bottom: 8px;
+      font-size: 0.72rem;
+    }
+    .inspector-field:last-child { margin-bottom: 0; }
+    .field-lbl { color: var(--accent-amber); font-weight: 600; margin-bottom: 2px; }
+    .field-txt { color: var(--text-secondary); line-height: 1.4; }
+    .field-code {
+      font-family: 'JetBrains Mono', monospace;
+      color: #fef08a;
+      font-size: 0.7rem;
+      background: rgba(0,0,0,0.4);
+      padding: 3px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 2px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="viewport-container">
+    <div class="top-toolbar">
+      <!-- Row 1: Nav, Brand, Switch & Model Sizes -->
+      <div class="tb-row">
+        <a href="../robot-arm-kinematics/" class="nav-link">← 机械臂整机运动学</a>
+        <div class="toolbar-sep"></div>
+        <a href="https://sortmark.com" target="_blank" rel="home" class="brand" style="text-decoration:none;display:flex;align-items:center;gap:6px;">⚡ <span style="font-weight:800;">SORTMARK</span> · 智能总线伺服机构 3D</a>
+        <div class="toolbar-sep"></div>
+        <a href="../harmonic-joint-actuator/" class="nav-link switch-joint" title="切换到谐波动力关节 3D 模型">
+          <span>🔘 切换至：谐波动力关节 3D →</span>
+        </a>
+        <div class="toolbar-sep"></div>
+        <a href="https://sortmark.com" target="_blank" rel="home" class="nav-link" style="margin-left:auto;border-color:rgba(245,158,11,0.4);color:var(--accent-amber);font-weight:700;">🌐 SORTMARK.COM ↗</a>
+      </div>
+      <div class="tb-row">
+        <div class="btn-group" id="size-group">
+          <button class="ctrl-btn active" onclick="setSize('SM3215', this)">SM-3215 (40×20×38 19.5kg·cm)</button>
+          <button class="ctrl-btn" onclick="setSize('SM85BL', this)">SM-85BL (54×28×43 85kg·cm)</button>
+          <button class="ctrl-btn" onclick="setSize('SM0009', this)">SM-0009 (23.2×12×25.5 2.3kg·cm)</button>
+        </div>
+      <!-- Row 2: Horn Switcher & Inspection Modes -->
+      <div class="tb-row">
+        <span style="font-size:0.7rem;font-weight:700;color:var(--accent-amber)">🕹️ 舵臂形态:</span>
+        <div class="btn-group" id="horn-group" title="切换舵盘与经典舵机摆臂形态">
+          <button class="ctrl-btn active" onclick="setHornType('single', this)">🕹️ 经典单边摇臂</button>
+          <button class="ctrl-btn" onclick="setHornType('round', this)">🔘 金属圆盘舵盘</button>
+          <button class="ctrl-btn" onclick="setHornType('double', this)">⚖️ 双边加强摆臂</button>
+          <button class="ctrl-btn" onclick="setHornType('cross', this)">➕ 四向十字舵臂</button>
+        </div>
+        <div class="toolbar-sep"></div>
+        <span style="font-size:0.7rem;font-weight:700;color:var(--accent-cyan)">🔬 模式:</span>
+        <div class="btn-group" id="mode-group">
+          <button class="ctrl-btn active" onclick="setMode('exterior', this)">🛡️ 完整装配态</button>
+          <button class="ctrl-btn" onclick="setMode('cutaway', this)">🔬 内部齿轮剖视</button>
+          <button class="ctrl-btn" onclick="setMode('exploded', this)">💥 轴向爆炸分解</button>
+          <button class="ctrl-btn" onclick="setMode('bracket', this)">🗜️ U型双出轴对夹</button>
+          <button class="ctrl-btn" onclick="setMode('sweep', this)">⚙️ 摆动运动测试</button>
+        </div>
+      </div>
+    </div>
+
+        <!-- Specs HUD -->
+    <div class="specs-card" id="specs-card">
+      <div class="specs-header">
+        <span class="specs-title" id="act-name">SORTMARK · SM-3215 (标准工业尺寸)</span>
+        <span class="badge badge-amber" id="act-dims">40.0 × 20.0 × 38.0 mm (标准)</span>
+      </div>
+      <div class="spec-row">
+        <span>架构范式</span>
+        <span class="spec-val" style="color:var(--accent-amber)">SORTMARK SM 矩形智能总线伺服执行器</span>
+      </div>
+      <div class="spec-row">
+        <span>额定堵转力矩</span>
+        <span class="spec-val" id="spec-torque">19.5 kg·cm (1.91 Nm) @ 7.4V</span>
+      </div>
+      <div class="spec-row">
+        <span>无负载转速</span>
+        <span class="spec-val" id="spec-speed">0.18 s / 60° (55 RPM)</span>
+      </div>
+      <div class="spec-row">
+        <span>核心承重架构</span>
+        <span class="spec-val" style="color:var(--accent-cyan)">主副双出轴 U 型对夹 (简支梁)</span>
+      </div>
+      <div class="spec-row">
+        <span>主输出轴形式</span>
+        <span class="spec-val" id="spec-horn">25T 花键 + 金属多孔盘 (Ø20)</span>
+      </div>
+      <div class="spec-row">
+        <span>同轴副支撑轴</span>
+        <span class="spec-val" id="spec-idler">微型深沟球轴承 6×10×3 mm</span>
+      </div>
+      <div class="spec-row">
+        <span>驱动电机类型</span>
+        <span class="spec-val">高功率无铁芯空心杯电机</span>
+      </div>
+      <div class="spec-row">
+        <span>减速齿轮箱</span>
+        <span class="spec-val">四级全金属粉末冶金合金齿轮</span>
+      </div>
+      <div class="spec-row">
+        <span>总线菊花链协议</span>
+        <span class="spec-val">异步串行 TTL / RS485 (1Mbps)</span>
+      </div>
+    </div>
+
+    <!-- Exploded Slider -->
+    <div class="exploded-bar" id="exploded-bar">
+      <span style="font-size:0.75rem;font-weight:600;color:var(--accent-amber)">💥 零件爆炸距离</span>
+      <input type="range" class="slider" id="explode-slider" min="0" max="100" value="50" oninput="onExplodeChange(this.value)">
+      <span style="font-family:'JetBrains Mono';font-size:0.75rem;font-weight:600" id="explode-val">50%</span>
+    </div>
+
+    <!-- View Controls -->
+    <div class="view-controls">
+      <button class="vc-btn" onclick="zoomCam(1)" title="放大">+</button>
+      <button class="vc-btn" onclick="zoomCam(-1)" title="缩小">−</button>
+      <button class="vc-btn" onclick="resetCam()" title="重置视角">↺</button>
+    </div>
+
+    <canvas id="canvas3d"></canvas>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span>SORTMARK 矩形总线伺服执行器</span>
+      </div>
+      <span class="badge badge-amber">双出轴跨接承载</span>
+    </div>
+
+    <div class="sidebar-content">
+      <!-- Straddle Mount Explanation -->
+      <div class="concept-card">
+        <div class="concept-title">
+          <span>🗜️ 为什么桌面开源机械臂必须用“主副双出轴对夹”？</span>
+        </div>
+        <div class="concept-desc">
+          普通模型舵机仅有单侧花键输出轴，安装机械臂时属于<strong>单边悬臂梁受力</strong>，极易在重载下载荷倾覆、导致齿轮崩齿或壳体变形。<br>
+          SORTMARK SM 系列总线执行器在背面设计了<strong>与主轴完全同轴的微型轴承副轴</strong>。配合铝合金 U 型臂板，两端同时夹紧（一侧锁紧主动 25T 金属圆盘，另一侧卡入同轴从动轴承），<strong>将悬臂受弯转变为双支点简支梁受力</strong>，刚度提升 400%！
+        </div>
+      </div>
+
+      <!-- Straddle Flow Diagram -->
+      <div class="flow-card">
+        <div class="flow-title">
+          <span>U型臂板双出轴对夹锁紧序列</span>
+          <span class="badge badge-cyan">简支梁刚度架构</span>
+        </div>
+        <div class="flow-steps">
+          <div class="flow-box active-side">
+            <span style="font-weight:700">01 U板主轴侧</span>
+            <span style="font-size:0.6rem">8×M2.5 盘面螺栓</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box center">
+            <span style="color:var(--accent-amber);font-weight:600">25T 金属主动盘</span>
+            <span style="color:var(--text-secondary);font-size:0.6rem">传递关节输出扭矩</span>
+            <div style="height:1px;background:var(--border-dim);margin:2px 0"></div>
+            <span style="color:var(--accent-cyan);font-weight:600">背面微型副轴承</span>
+            <span style="color:var(--text-secondary);font-size:0.6rem">平衡外翻倾覆弯矩</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box passive-side">
+            <span style="font-weight:700">04 U板副轴侧</span>
+            <span style="font-size:0.6rem">同轴顶丝/销轴承托</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Components List -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:0.75rem;font-weight:700;color:var(--text-primary)">舵机核心机械与电气零部件</span>
+          <span style="font-size:0.68rem;color:var(--accent-amber)">点击高亮零件</span>
+        </div>
+        <div class="comp-list" id="comp-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Inspector -->
+      <div class="inspector-card" id="inspector-card">
+        <div class="inspector-title" id="insp-title">选中零件：CNC 铝合金中段散热骨架壳</div>
+        <div class="inspector-field">
+          <div class="field-lbl">安装位置与功用</div>
+          <div class="field-txt" id="insp-layer">壳体核心中段 · 承重与散热基座</div>
+        </div>
+        <div class="inspector-field">
+          <div class="field-lbl">材料与表面处理</div>
+          <div class="field-txt" id="insp-mat">航空 6061-T6 铝合金，CNC 精密铣削，阳极氧化哑光黑，5 组横向散热鳍片</div>
+        </div>
+        <div class="inspector-field">
+          <div class="field-lbl">制造配合公差</div>
+          <div class="field-code" id="insp-tol">马达固定腔同心度 &lt; 0.01mm, 四周安装螺纹 M2.5 深度 4mm</div>
+        </div>
+        <div class="inspector-field">
+          <div class="field-lbl">工程力学机理</div>
+          <div class="field-txt" id="insp-desc">内部精密固定电机与控制板，外部横向翅片增大热交换表面积，连续满载工作温升降低 18℃。正面与侧面加工有标准化安装螺孔，供固定在上一级机器人连杆上。</div>
+        </div>
+      </div>
+
+      <!-- Contact & Business Consultation Card -->
+      <div class="inspector-card" style="border-color:rgba(245,158,11,0.45);background:rgba(25,18,12,0.85);margin-top:8px;">
+        <div class="inspector-title" style="color:var(--accent-amber);">🚀 伺服执行器与传动机构工程支持</div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);line-height:1.55;">
+          SORTMARK 专注于高可靠性机器人执行器机构设计、齿轮动力学仿真与高刚度简支梁架构开发。<br>
+          <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+            <a href="mailto:contact@sortmark.com" style="color:#fff;text-decoration:none;font-weight:600;">✉️ contact@sortmark.com</a>
+            <a href="https://sortmark.com" target="_blank" rel="home" style="color:var(--accent-amber);text-decoration:none;font-weight:700;">sortmark.com ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------------
+    // Engineering Specifications: SORTMARK SM Series Bus Servos
+    // -------------------------------------------------------------------
+    const SERVO_SIZES = {
+      SM3215: {
+        name: 'SORTMARK · SM-3215 (标准工业尺寸 25T 智能总线舵机)',
+        dims: '40.0 × 20.0 × 38.0 mm (耳展 54.0 mm, 国际标准尺寸)',
+        bodyL: 40.0,    // Standard Servo Box Length: 40.0mm
+        earSpan: 54.0,  // Standard Ear Span: 54.0mm (48.5mm hole pitch)
+        W: 20.0,        // Standard Servo Width: 20.0mm (Universal Industry Standard)
+        H: 38.0,        // Standard Servo Total Height: 38.0mm
+        flangeY: 10.0,  // Mounting ear height
+        shaftOffset: 10.0, // Standard 25T Output Shaft: offset 10mm from center (10mm from front, 30mm from back)
+        torque: '19.5 kg·cm (1.91 Nm) @ 7.4V',
+        speed: '0.18 s / 60° (55 RPM)',
+        horn: '25T 国际标准花键 (Ø5.92mm, 25齿)',
+        idler: '底部同轴微型深沟球轴承 6×10×3 mm',
+        voltage: '6.0V ~ 8.4V (2S LiPo)',
+        gearRatio: '1:285 四级全钢齿轮'
+      },
+      SM85BL: {
+        name: 'SORTMARK · SM-85BL (重载大扭矩无刷总线舵机)',
+        dims: '54.0 × 28.0 × 43.0 mm (耳展 65.0 mm)',
+        bodyL: 48.0,
+        earSpan: 65.0,
+        W: 28.0,
+        H: 43.0,
+        flangeY: 12.0,
+        shaftOffset: 13.0,
+        torque: '85.0 kg·cm (8.33 Nm) @ 12V',
+        speed: '0.14 s / 60° (71 RPM)',
+        horn: '25T 重载花键 (Ø6.0mm)',
+        idler: '底部同轴轴承 8×12×3.5 mm',
+        voltage: '9.0V ~ 14.8V (3S-4S)',
+        gearRatio: '1:340 淬火合金齿轮'
+      },
+      SM0009: {
+        name: 'SORTMARK · SM-0009 (微型轻量总线微舵机)',
+        dims: '23.2 × 12.0 × 25.5 mm (耳展 32.0 mm)',
+        bodyL: 21.0,
+        earSpan: 32.0,
+        W: 12.0,
+        H: 24.0,
+        flangeY: 6.5,
+        shaftOffset: 5.5,
+        torque: '2.3 kg·cm (0.22 Nm) @ 6V',
+        speed: '0.08 s / 60° (125 RPM)',
+        horn: '微型 20T 花键',
+        idler: '底部同轴限位销',
+        voltage: '4.8V ~ 7.4V',
+        gearRatio: '1:180 金属齿轮'
+      }
+    };
+
+    const SERVO_COMPONENTS = [
+      {
+        id: 'mid_case',
+        name: '01 CNC 铝合金中段散热骨架壳 (Mid Aluminum Case)',
+        role: '承重骨架与散热中枢 · 激光标牌',
+        color: '#1e293b',
+        mat: '航空级 6061-T6 铝合金，CNC 铣削散热凹槽，哑光阳极氧化，银白倒角边缘',
+        tol: '马达安装腔与轴承腔同轴度 < 0.01mm, 侧壁激光蚀刻原厂认证标牌',
+        desc: '舵机的核心受力外壳。采用航空铝合金一体成型，侧壁精密切削 4 道横向散热深槽，有效将空心杯电机高负载发热导出壳体。'
+      },
+      {
+        id: 'top_cap',
+        name: '02 阶梯顶盖与外凸轴颈 (Stepped Top Gearbox Cap & Snout)',
+        role: '高低台阶顶盖 · 4 角减震安装耳',
+        color: '#0f172a',
+        mat: 'PA66+GF30% 强化工程尼龙，外凸双轴承轴颈，外伸耳板嵌装纯铜衬套',
+        tol: '内嵌双精密滚珠轴承座，标准双侧安装孔耳板（各压装 2 粒黄铜空心铆钉）',
+        desc: '经典舵机特征外壳！输出端高起形成圆柱轴颈，电机端平滑阶梯过渡收紧，两侧外延安装耳带有标准减震纯铜衬套，抗拉压抗冲击。'
+      },
+      {
+        id: 'horn_assembly',
+        name: '03 25T 多形态舵机输出摆臂/舵盘 (25T Spline Servo Horns)',
+        role: '动力输出末端 · 支持摇臂/圆盘',
+        color: '#f59e0b',
+        mat: '7075-T6 强化铝合金 / 玻纤复合材料，25T 渐开线精密花键套，M3 沉头锁紧螺栓',
+        tol: '25T 标准渐开线花键配合，单边臂/双边臂/十字臂/圆盘自由切换',
+        desc: '执行器输出机构。经典单边摆臂带有 4 组阶梯连杆孔与防滑夹紧缝；圆盘舵盘带有 8 组 M2.5 沉孔，供高刚度机器人连杆锁紧。'
+      },
+      {
+        id: 'rear_horn',
+        name: '04 底部同轴承重副轴与微型轴承 (Coaxial Idler Horn & Bearing)',
+        role: '双出轴对夹核心支点 · 消除悬臂弯矩',
+        color: '#38bdf8',
+        mat: '不锈钢超精深沟球轴承 (6×10×3 mm) + CNC 铝合金从动盘',
+        tol: '与顶端 25T 主轴同轴度 < 0.012mm, 径向间隙 < 0.005mm',
+        desc: '位于底壳正下方的同轴副支点。与顶端主轴完全同心，使外侧 U 型机械臂板形成两端简支梁支撑，彻底消灭单边悬臂弯矩。'
+      },
+      {
+        id: 'gearbox',
+        name: '05 全金属四级减速齿轮箱 (All-Steel 4-Stage Gear Train)',
+        role: '高扭矩四级减速 (1:285 零崩齿)',
+        color: '#cbd5e1',
+        mat: '粉末冶金合金钢大齿轮 + 40Cr 淬火过渡双联轮 + 黄铜马达小齿轮',
+        tol: '渐开线齿形精度 ISO 6 级，双深沟球滚珠轴承支撑主输出轴',
+        desc: '由马达铜小齿轮驱动，经 2 组双联全金属减速齿轮级联，最终驱动主轴全钢扇形大齿轮，极限承载力矩超 25kg·cm。'
+      },
+      {
+        id: 'motor',
+        name: '06 高功率无铁芯空心杯电机 (Coreless DC Motor)',
+        role: '核心动力源 · 极低转动惯量',
+        color: '#eab308',
+        mat: '钕铁硼稀土永磁体内定子 + 无铁芯自支撑铜线转子杯 + 贵金属电刷',
+        tol: '无负载转速 12000 RPM, 机械响应时间 < 4.5ms',
+        desc: '无铁芯转子消除了齿槽磁滞阻力，启动加速敏捷轻快，在机械臂重力补偿与快速插补时极速跟随、无颤抖顿挫。'
+      },
+      {
+        id: 'bottom_cap',
+        name: '07 底部接口仓密封盖与总线插座 (Bottom Cap & Daisy-Chain Bus)',
+        role: 'TTL 双向总线菊花链插口仓',
+        color: '#0f172a',
+        mat: 'PA66 阻燃工程塑料，嵌装双 JST-PA 3-Pin 插座 + 仿真舵机引出线束',
+        tol: 'IP54 防护，双口并联直通，单总线可串联多达 253 台舵机',
+        desc: '容纳串行总线的入线与出线接插件。真实仿真黑/红/白三色伺服引出排线，机器人各关节实现一线穿串，无需繁冗布线。'
+      },
+      {
+        id: 'pcb_encoder',
+        name: '08 智能总线驱动板与 12-Bit 磁编码器 (Controller & Magnetic Encoder)',
+        role: '伺服驱动、总线通信与角度反馈',
+        color: '#10b981',
+        mat: '沉金 FR4 四层板 + 32-bit ARM Cortex 处理器 + 磁敏传感芯片',
+        tol: '12-bit (4096线) 角度分辨率, 500Kbps~1Mbps 串行总线三闭环',
+        desc: '集成电流环、速度环与位置环 PID。板载磁敏传感器正对主轴底端径向磁钢，实现 360° 无物理死区绝对角度检测。'
+      },
+      {
+        id: 'bracket',
+        name: '09 航空铝合金双出轴对夹 U 型臂板 (Bilateral U-Bracket Bridge)',
+        role: '简支梁高刚度臂架 · 彻底消除倾覆',
+        color: '#64748b',
+        mat: '6061-T6 阳极氧化铝合金板，双侧对夹包覆，轻量化镂空减重孔',
+        tol: '两臂开档尺寸公差 H9 (+0.05/0), 4×M2.5 盘面螺栓刚性锁死',
+        desc: '标准工业机器人关节连接构件。顶臂锁死主动舵盘，底臂插销由副轴承支撑，承受载荷时两侧均摊剪切力，齿轮箱内部永不歪斜卡死。'
+      }
+    ];
+
+    // Current State
+    let currentSize = 'SM3215';
+    let currentHornType = 'single'; // 'single', 'round', 'double', 'cross'
+    let currentMode = 'exterior';
+    let explodeDistance = 0.5;
+    let selectedComponentId = null;
+
+    // Three.js Core
+    let scene, camera, renderer, controls;
+    let servoGroup = new THREE.Group();
+    let uBracketGroup = new THREE.Group();
+    let compMeshes = {};
+    let isRunningSweep = false;
+    let clock = new THREE.Clock();
+    let sweepTime = 0;
+
+    // -------------------------------------------------------------------
+    // Generate Crisp Laser Engraved Metal Texture for Casing
+    // -------------------------------------------------------------------
+    function createServoLaserTexture(spec) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 160;
+      const ctx = canvas.getContext('2d');
+
+      // Satin dark aluminum background
+      ctx.fillStyle = '#141c2b';
+      ctx.fillRect(0, 0, 512, 160);
+
+      // Fine brushed metal lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < 160; y += 3) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(512, y);
+        ctx.stroke();
+      }
+
+      // Brand Title
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 32px "Inter", "Arial", sans-serif';
+      ctx.fillText('SORTMARK', 24, 46);
+
+      // Model Badge
+      const modelLabel = currentSize === 'SM3215' ? 'SM-3215' : (currentSize === 'SM85BL' ? 'SM-85BL' : 'SM-0009');
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 24px "JetBrains Mono", monospace';
+      ctx.fillText(modelLabel, 235, 46);
+
+      // Subtitle
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '15px "Inter", sans-serif';
+      ctx.fillText('SMART SERIAL BUS SERVO  |  12-BIT MAGNETIC ENCODER', 24, 82);
+
+      // Spec values
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 15px "JetBrains Mono", monospace';
+      ctx.fillText(spec.torque + '  |  1Mbps TTL', 24, 114);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px "JetBrains Mono", monospace';
+      ctx.fillText('ROTATION: 360° CONTINUOUS  |  RoHS CE COMPLIANT', 24, 140);
+
+      // Barcode graphic on right edge
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 22; i++) {
+        const w = (i % 3 === 0) ? 3 : ((i % 5 === 0) ? 4 : 2);
+        ctx.fillRect(415 + i * 4, 25, w, 95);
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = 8;
+      return texture;
+    }
+
+    // -------------------------------------------------------------------
+    // Scene Initialization with Neutral Studio Illumination
+    // -------------------------------------------------------------------
+    function initThree() {
+      const container = document.getElementById('viewport-container');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x060910, 0.0018);
+
+      camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+      camera.position.set(135, 95, 145);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById('canvas3d'),
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance'
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.target.set(-6, 0, 0);
+      controls.maxDistance = 450;
+      controls.minDistance = 20;
+
+      // Studio Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.35);
+      keyLight.position.set(110, 150, 130);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.width = 2048;
+      keyLight.shadow.mapSize.height = 2048;
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0x94a3b8, 0.6);
+      fillLight.position.set(-110, 50, -90);
+      scene.add(fillLight);
+
+      const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.75);
+      rimLight.position.set(0, -90, -110);
+      scene.add(rimLight);
+
+      // Floor Grid
+      const grid = new THREE.GridHelper(300, 30, 0x334155, 0x1e293b);
+      grid.position.y = -50;
+      scene.add(grid);
+
+      scene.add(servoGroup);
+      scene.add(uBracketGroup);
+
+      buildServoModel();
+      populateCompList();
+      applyMode(currentMode);
+
+      window.addEventListener('resize', onWindowResize);
+      animate();
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('viewport-container');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    // -------------------------------------------------------------------
+    // Build High-Fidelity SORTMARK SM Series Servo 3D Model
+    // -------------------------------------------------------------------
+    function buildServoModel() {
+      while (servoGroup.children.length > 0) servoGroup.remove(servoGroup.children[0]);
+      while (uBracketGroup.children.length > 0) uBracketGroup.remove(uBracketGroup.children[0]);
+      compMeshes = {};
+
+      const spec = SERVO_SIZES[currentSize] || SERVO_SIZES.SM3215;
+      const bL = spec.bodyL;
+      const earSpan = spec.earSpan;
+      const W = spec.W;
+      const H = spec.H;
+      const shaftX = spec.shaftOffset;
+      const isCutaway = (currentMode === 'cutaway');
+
+      // Shared materials
+      const cncAluMat = new THREE.MeshStandardMaterial({
+        color: 0x18202f, // CNC satin anodized aircraft aluminum
+        metalness: 0.88,
+        roughness: 0.25
+      });
+      const silverChamferMat = new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0, // Raw cut silver aluminum chamfer
+        metalness: 0.95,
+        roughness: 0.15
+      });
+      const nylonMat = new THREE.MeshStandardMaterial({
+        color: 0x0c111d, // PA66-GF30 textured engineering black nylon
+        metalness: 0.25,
+        roughness: 0.6,
+        transparent: isCutaway,
+        opacity: isCutaway ? 0.32 : 1.0
+      });
+      const hornGoldMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b, // Amber gold anodized 7075-T6
+        metalness: 0.9,
+        roughness: 0.2
+      });
+      const steelMat = new THREE.MeshStandardMaterial({
+        color: 0xcbd5e1, // Hardened carbon steel
+        metalness: 0.95,
+        roughness: 0.18
+      });
+      const brassMat = new THREE.MeshStandardMaterial({
+        color: 0xfacc15, // Polished brass eyelet / pinion
+        metalness: 0.92,
+        roughness: 0.22
+      });
+      const boltMat = new THREE.MeshStandardMaterial({
+        color: 0x090d16, // Black oxide M2/M2.5/M3 socket cap bolt
+        metalness: 0.95,
+        roughness: 0.3
+      });
+
+      // =================================================================
+      // 01. CNC Aluminum Middle Case (with 4 Cooling Grooves & Laser Logo)
+      // =================================================================
+      const midGroup = new THREE.Group();
+      midGroup.name = 'mid_case';
+      const midH = H * 0.44; // ~15.8mm
+      const midGeo = new THREE.BoxGeometry(bL, midH, W);
+      const midMesh = new THREE.Mesh(midGeo, cncAluMat);
+      midMesh.castShadow = true;
+      midMesh.receiveShadow = true;
+      midGroup.add(midMesh);
+
+      // Silver Chamfer Highlight Rings at top and bottom of CNC aluminum case
+      for (let edgeY of [-(midH / 2), (midH / 2)]) {
+        const borderGeo = new THREE.BoxGeometry(bL + 0.3, 0.4, W + 0.3);
+        const borderMesh = new THREE.Mesh(borderGeo, silverChamferMat);
+        borderMesh.position.y = edgeY;
+        midGroup.add(borderMesh);
+      }
+
+      // 4 Precision CNC Horizontal Cooling Grooves milled into side walls
+      for (let g = -1.5; g <= 1.5; g += 1.0) {
+        const grooveGeo = new THREE.BoxGeometry(bL + 0.5, 0.85, W + 0.6);
+        const grooveMesh = new THREE.Mesh(grooveGeo, new THREE.MeshStandardMaterial({
+          color: 0x0a0f18,
+          metalness: 0.95,
+          roughness: 0.2
+        }));
+        grooveMesh.position.y = g * 2.8;
+        midGroup.add(grooveMesh);
+      }
+
+      // Laser Etched Branding Badge (High-Res Canvas Texture)
+      const laserTex = createServoLaserTexture(spec);
+      const labelMat = new THREE.MeshStandardMaterial({
+        map: laserTex,
+        roughness: 0.35,
+        metalness: 0.8
+      });
+      const labelPlate = new THREE.Mesh(new THREE.PlaneGeometry(bL * 0.82, midH * 0.72), labelMat);
+      labelPlate.position.set(0, 0, (W / 2) + 0.05);
+      midGroup.add(labelPlate);
+
+      compMeshes['mid_case'] = midGroup;
+      servoGroup.add(midGroup);
+
+      // =================================================================
+      // 02. Stepped Top Gearbox Cap with Output Snout & 4 Mounting Ears
+      // =================================================================
+      const topGroup = new THREE.Group();
+      topGroup.name = 'top_cap';
+      const topH = H * 0.32; // ~11.5mm
+      const topY = (midH / 2) + (topH / 2);
+
+      // Stepped Gearbox Cover: High over gear shaft, stepped down over motor
+      const topBaseGeo = new THREE.BoxGeometry(bL, topH, W);
+      const topBaseMesh = new THREE.Mesh(topBaseGeo, nylonMat);
+      topBaseMesh.position.y = topY;
+      topGroup.add(topBaseMesh);
+
+      // Raised Cylindrical Output Snout over shaftX (housing top bearing)
+      const snoutR = 7.4;
+      const snoutH = 4.2;
+      const snoutGeo = new THREE.CylinderGeometry(snoutR, snoutR + 0.4, snoutH, 32);
+      const snoutMesh = new THREE.Mesh(snoutGeo, nylonMat);
+      snoutMesh.position.set(shaftX, topY + (topH / 2) + (snoutH / 2), 0);
+      topGroup.add(snoutMesh);
+
+      // Recessed ball bearing collar inside snout
+      const collarMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(5.2, 5.2, 1.0, 24),
+        steelMat
+      );
+      collarMesh.position.set(shaftX, topY + (topH / 2) + snoutH + 0.2, 0);
+      topGroup.add(collarMesh);
+
+      // Sloped rear cover step over motor area
+      const stepMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(bL * 0.45, 2.0, W * 0.9),
+        nylonMat
+      );
+      stepMesh.position.set(-bL * 0.24, topY + (topH / 2) - 0.2, 0);
+      topGroup.add(stepMesh);
+
+      // 4 Standard Horizontal Mounting Ears with Brass Eyelets (2 at each narrow end)
+      const earLength = (earSpan - bL) / 2; // ~7.0mm extension
+      const earThick = 2.8;
+      const earY = (midH / 2) + 1.2;
+
+      for (let side = -1; side <= 1; side += 2) {
+        // Ear flange plate extending horizontally
+        const earGeo = new THREE.BoxGeometry(earLength, earThick, W * 0.88);
+        const earMesh = new THREE.Mesh(earGeo, nylonMat);
+        earMesh.position.set(side * ((bL / 2) + (earLength / 2)), earY, 0);
+        topGroup.add(earMesh);
+
+        // 2 Brass Eyelets / Bushings with central hole on each ear
+        for (let ez = -1; ez <= 1; ez += 2) {
+          const eyeletX = side * ((bL / 2) + (earLength * 0.52));
+          const eyeletZ = ez * (W * 0.28);
+
+          // Brass grommet flange
+          const grommetMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.3, 2.3, earThick + 0.8, 16),
+            brassMat
+          );
+          grommetMesh.position.set(eyeletX, earY, eyeletZ);
+          topGroup.add(grommetMesh);
+
+          // Central mounting hole
+          const holeMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.2, 1.2, earThick + 1.2, 12),
+            new THREE.MeshBasicMaterial({ color: 0x000000 })
+          );
+          holeMesh.position.set(eyeletX, earY, eyeletZ);
+          topGroup.add(holeMesh);
+        }
+      }
+
+      // 4 Long Steel Corner Assembly Bolts running through the body
+      for (let sx = -1; sx <= 1; sx += 2) {
+        for (let sz = -1; sz <= 1; sz += 2) {
+          const boltHead = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 1.6, 12), boltMat);
+          boltHead.position.set(sx * (bL * 0.44), topY + (topH / 2) + 0.6, sz * (W * 0.42));
+          topGroup.add(boltHead);
+        }
+      }
+
+      compMeshes['top_cap'] = topGroup;
+      servoGroup.add(topGroup);
+
+      // =================================================================
+      // 03. 25T Spline Shaft & Multi-Form Servo Horns (User Switchable!)
+      // =================================================================
+      const hornGroup = new THREE.Group();
+      hornGroup.name = 'horn_assembly';
+
+      // 25T Metal Involute Spline Output Shaft
+      const splineR = 2.95;
+      const splineH = 4.5;
+      const splineGeo = new THREE.CylinderGeometry(splineR, splineR, splineH, 25);
+      const splineMesh = new THREE.Mesh(splineGeo, steelMat);
+      const shaftBaseY = topY + (topH / 2) + snoutH;
+      splineMesh.position.set(shaftX, shaftBaseY + (splineH / 2), 0);
+      hornGroup.add(splineMesh);
+
+      const hornBaseY = shaftBaseY + splineH;
+
+      // Build the selected horn type
+      if (currentHornType === 'single') {
+        // -------------------------------------------------------------
+        // A. Classic High-Rigidity Single-Arm Horn (经典单边摇臂)
+        // -------------------------------------------------------------
+        const armLen = 32.0;
+        const hubR = 6.2;
+        const tipR = 3.2;
+        const hornThick = 3.6;
+
+        const armShape = new THREE.Shape();
+        armShape.absarc(0, 0, hubR, Math.PI * 0.5, Math.PI * 1.5, false);
+        armShape.lineTo(armLen, -tipR);
+        armShape.absarc(armLen, 0, tipR, -Math.PI * 0.5, Math.PI * 0.5, false);
+        armShape.lineTo(0, hubR);
+
+        // Center spline hole
+        const centerHole = new THREE.Path();
+        centerHole.absarc(0, 0, 1.8, 0, Math.PI * 2, true);
+        armShape.holes.push(centerHole);
+
+        // 4 Graduated Linkage Holes along arm
+        for (let h = 12; h <= 28; h += 5) {
+          const lHole = new THREE.Path();
+          lHole.absarc(h, 0, 1.0, 0, Math.PI * 2, true);
+          armShape.holes.push(lHole);
+        }
+
+        const armGeo = new THREE.ExtrudeGeometry(armShape, {
+          depth: hornThick,
+          bevelEnabled: true,
+          bevelThickness: 0.4,
+          bevelSize: 0.4,
+          bevelSegments: 2
+        });
+        armGeo.rotateX(Math.PI / 2);
+        const armMesh = new THREE.Mesh(armGeo, hornGoldMat);
+        armMesh.position.set(shaftX, hornBaseY + (hornThick / 2), 0);
+        hornGroup.add(armMesh);
+
+        // Center M3 Socket Cap Bolt with Washer
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, hornThick + 1.2, 16), boltMat);
+        bolt.position.set(shaftX, hornBaseY + hornThick, 0);
+        hornGroup.add(bolt);
+
+        // Clamping slit and pinch screw on hub
+        const pinchScrew = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 8.0, 12), boltMat);
+        pinchScrew.rotation.z = Math.PI / 2;
+        pinchScrew.position.set(shaftX - 3.5, hornBaseY + (hornThick / 2), 0);
+        hornGroup.add(pinchScrew);
+
+      } else if (currentHornType === 'round') {
+        // -------------------------------------------------------------
+        // B. CNC Aluminum Multi-Hole Round Disc Horn (CNC 金属圆盘舵盘)
+        // -------------------------------------------------------------
+        const hornR = 10.5;
+        const hornThick = 3.2;
+        const hornGeo = new THREE.CylinderGeometry(hornR, hornR, hornThick, 36);
+        const hornMesh = new THREE.Mesh(hornGeo, hornGoldMat);
+        hornMesh.position.set(shaftX, hornBaseY + (hornThick / 2), 0);
+        hornGroup.add(hornMesh);
+
+        // 8 PCD M2.5 Threaded Holes
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2;
+          const holeMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, hornThick + 0.4, 12), boltMat);
+          holeMesh.position.set(shaftX + Math.cos(ang) * 7.5, hornBaseY + (hornThick / 2), Math.sin(ang) * 7.5);
+          hornGroup.add(holeMesh);
+        }
+
+        // Center M3 Lock Screw
+        const centerBolt = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, hornThick + 1.0, 16), boltMat);
+        centerBolt.position.set(shaftX, hornBaseY + hornThick, 0);
+        hornGroup.add(centerBolt);
+
+      } else if (currentHornType === 'double') {
+        // -------------------------------------------------------------
+        // C. Double-Arm Symmetric Horn (双边加强摆臂)
+        // -------------------------------------------------------------
+        const halfLen = 22.0;
+        const hornThick = 3.6;
+        const shape = new THREE.Shape();
+        shape.moveTo(-halfLen, -3.0);
+        shape.lineTo(halfLen, -3.0);
+        shape.absarc(halfLen, 0, 3.0, -Math.PI * 0.5, Math.PI * 0.5, false);
+        shape.lineTo(-halfLen, 3.0);
+        shape.absarc(-halfLen, 0, 3.0, Math.PI * 0.5, Math.PI * 1.5, false);
+
+        // Center hole
+        const cHole = new THREE.Path();
+        cHole.absarc(0, 0, 2.0, 0, Math.PI * 2, true);
+        shape.holes.push(cHole);
+
+        // Holes along both arms
+        for (let dx of [-18, -13, -8, 8, 13, 18]) {
+          const h = new THREE.Path();
+          h.absarc(dx, 0, 1.0, 0, Math.PI * 2, true);
+          shape.holes.push(h);
+        }
+
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: hornThick, bevelEnabled: true, bevelThickness: 0.3, bevelSize: 0.3 });
+        geo.rotateX(Math.PI / 2);
+        const mesh = new THREE.Mesh(geo, hornGoldMat);
+        mesh.position.set(shaftX, hornBaseY + (hornThick / 2), 0);
+        hornGroup.add(mesh);
+
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, hornThick + 1.0, 16), boltMat);
+        bolt.position.set(shaftX, hornBaseY + hornThick, 0);
+        hornGroup.add(bolt);
+
+      } else {
+        // -------------------------------------------------------------
+        // D. Cross 4-Arm Servo Horn (四向十字舵臂)
+        // -------------------------------------------------------------
+        const span = 18.0;
+        const hornThick = 3.2;
+        const shape = new THREE.Shape();
+        const armW = 4.0;
+        shape.moveTo(-armW, -armW);
+        shape.lineTo(-span, -armW);
+        shape.lineTo(-span, armW);
+        shape.lineTo(-armW, armW);
+        shape.lineTo(-armW, span);
+        shape.lineTo(armW, span);
+        shape.lineTo(armW, armW);
+        shape.lineTo(span, armW);
+        shape.lineTo(span, -armW);
+        shape.lineTo(armW, -armW);
+        shape.lineTo(armW, -span);
+        shape.lineTo(-armW, -span);
+        shape.closePath();
+
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: hornThick, bevelEnabled: true, bevelThickness: 0.3, bevelSize: 0.3 });
+        geo.rotateX(Math.PI / 2);
+        const mesh = new THREE.Mesh(geo, hornGoldMat);
+        mesh.position.set(shaftX, hornBaseY + (hornThick / 2), 0);
+        hornGroup.add(mesh);
+
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, hornThick + 1.0, 16), boltMat);
+        bolt.position.set(shaftX, hornBaseY + hornThick, 0);
+        hornGroup.add(bolt);
+      }
+
+      compMeshes['horn_assembly'] = hornGroup;
+      servoGroup.add(hornGroup);
+
+      // =================================================================
+      // 04. Bottom Cap with Daisy-Chain Sockets & Ribbon Cable
+      // =================================================================
+      const botGroup = new THREE.Group();
+      botGroup.name = 'bottom_cap';
+      const botH = H * 0.24; // ~8.6mm
+      const botY = -(midH / 2) - (botH / 2);
+
+      const botGeo = new THREE.BoxGeometry(bL, botH, W);
+      const botMesh = new THREE.Mesh(botGeo, nylonMat);
+      botMesh.position.y = botY;
+      botGroup.add(botMesh);
+
+      // Dual JST-PA 3-Pin Daisy-Chain Receptacles on bottom side
+      for (let p = -1; p <= 1; p += 2) {
+        const portX = -bL * 0.22 + (p * 5.2);
+        const portMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(6.2, 4.0, 4.0),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 })
+        );
+        portMesh.position.set(portX, botY - (botH / 2) + 1.8, (W / 2) - 0.4);
+        botGroup.add(portMesh);
+
+        // 3 Gold Pins inside socket
+        for (let pin = -1; pin <= 1; pin++) {
+          const pinMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.0, 0.5), brassMat);
+          pinMesh.position.set(portX + (pin * 1.4), botY - (botH / 2) + 1.8, (W / 2) + 1.0);
+          botGroup.add(pinMesh);
+        }
+      }
+
+      // Flexible 3-Wire Servo Cable (Black GND, Red VCC, White Signal)
+      const cableColors = [0x1e293b, 0xef4444, 0xf8fafc];
+      for (let c = 0; c < 3; c++) {
+        const cX = -bL * 0.22 - 5.2 + (c * 1.4);
+        const curve = new THREE.CubicBezierCurve3(
+          new THREE.Vector3(cX, botY - (botH / 2) + 1.8, (W / 2) + 1.2),
+          new THREE.Vector3(cX, botY - (botH / 2) - 8.0, (W / 2) + 6.0),
+          new THREE.Vector3(cX, botY - (botH / 2) - 18.0, (W / 2) + 14.0),
+          new THREE.Vector3(cX, botY - (botH / 2) - 28.0, (W / 2) + 18.0)
+        );
+        const cGeo = new THREE.TubeGeometry(curve, 16, 0.6, 8, false);
+        const cMat = new THREE.MeshStandardMaterial({ color: cableColors[c], roughness: 0.5 });
+        botGroup.add(new THREE.Mesh(cGeo, cMat));
+      }
+
+      // Raised Coaxial Idler Boss on Bottom Face (Concentric with shaftX!)
+      const idlerBoss = new THREE.Mesh(
+        new THREE.CylinderGeometry(6.5, 6.5, 2.5, 28),
+        nylonMat
+      );
+      idlerBoss.position.set(shaftX, botY - (botH / 2) - 1.0, 0);
+      botGroup.add(idlerBoss);
+
+      compMeshes['bottom_cap'] = botGroup;
+      servoGroup.add(botGroup);
+
+      // =================================================================
+      // 05. Coaxial Idler Ball Bearing & Slave Horn (Bottom Coaxial Axis)
+      // =================================================================
+      const rearHornGroup = new THREE.Group();
+      rearHornGroup.name = 'rear_horn';
+
+      // Miniature Ball Bearing 6x10x3 mm
+      const brgOuter = new THREE.Mesh(new THREE.CylinderGeometry(5.0, 5.0, 2.8, 24), steelMat);
+      brgOuter.position.set(shaftX, botY - (botH / 2) - 2.5, 0);
+      rearHornGroup.add(brgOuter);
+
+      const brgInner = new THREE.Mesh(
+        new THREE.CylinderGeometry(3.0, 3.0, 3.2, 16),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.15 })
+      );
+      brgInner.position.set(shaftX, botY - (botH / 2) - 2.5, 0);
+      rearHornGroup.add(brgInner);
+
+      // Aluminum Idler Circular Support Plate (Matching horn finish)
+      const idlerPlate = new THREE.Mesh(
+        new THREE.CylinderGeometry(8.5, 8.5, 2.2, 28),
+        hornGoldMat
+      );
+      idlerPlate.position.set(shaftX, botY - (botH / 2) - 4.5, 0);
+      rearHornGroup.add(idlerPlate);
+
+      // 4 M2.5 Threaded Holes in Idler Plate
+      for (let i = 0; i < 4; i++) {
+        const ang = (i / 4) * Math.PI * 2;
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 2.5, 12), boltMat);
+        b.position.set(shaftX + Math.cos(ang) * 5.5, botY - (botH / 2) - 4.5, Math.sin(ang) * 5.5);
+        rearHornGroup.add(b);
+      }
+
+      compMeshes['rear_horn'] = rearHornGroup;
+      servoGroup.add(rearHornGroup);
+
+      // =================================================================
+      // 06. Internal 4-Stage Steel Reduction Gear Train
+      // =================================================================
+      const gearGroup = new THREE.Group();
+      gearGroup.name = 'gearbox';
+
+      const pinY = topY - 1.0;
+      // Brass Pinion Gear (12T) on motor shaft
+      const g0 = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 4.0, 16), brassMat);
+      g0.position.set(-bL * 0.22, pinY, 0);
+      gearGroup.add(g0);
+
+      // Stage 2 Cluster Gear (Steel, 38T/14T)
+      const g1 = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 3.2, 20), steelMat);
+      g1.position.set(-2.0, pinY + 1.0, 0);
+      gearGroup.add(g1);
+
+      // Stage 3 Cluster Gear (Steel, 36T/13T)
+      const g2 = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 6.4, 3.2, 24), steelMat);
+      g2.position.set(4.5, pinY + 2.0, 0);
+      gearGroup.add(g2);
+
+      // Stage 4 Output Gear (Steel, 42T)
+      const g3 = new THREE.Mesh(new THREE.CylinderGeometry(8.5, 8.5, 4.5, 28), steelMat);
+      g3.position.set(shaftX, pinY + 2.5, 0);
+      gearGroup.add(g3);
+
+      // Dowel pins
+      for (let px of [-2.0, 4.5]) {
+        const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 9.0, 12), steelMat);
+        pin.position.set(px, pinY + 1.5, 0);
+        gearGroup.add(pin);
+      }
+
+      compMeshes['gearbox'] = gearGroup;
+      servoGroup.add(gearGroup);
+
+      // =================================================================
+      // 07. Internal Coreless DC Motor Cylinder
+      // =================================================================
+      const motorGroup = new THREE.Group();
+      motorGroup.name = 'motor';
+      const motorR = 8.2;
+      const motorLen = 21.0;
+      const motorGeo = new THREE.CylinderGeometry(motorR, motorR, motorLen, 24);
+      const motorMesh = new THREE.Mesh(motorGeo, brassMat);
+      motorMesh.position.set(-bL * 0.22, -1.0, 0);
+      motorGroup.add(motorMesh);
+
+      compMeshes['motor'] = motorGroup;
+      servoGroup.add(motorGroup);
+
+      // =================================================================
+      // 08. Controller PCB & 12-Bit Magnetic Encoder
+      // =================================================================
+      const pcbGroup = new THREE.Group();
+      pcbGroup.name = 'pcb_encoder';
+      const pcbGeo = new THREE.BoxGeometry(bL * 0.88, 1.6, W * 0.85);
+      const pcbMat = new THREE.MeshStandardMaterial({ color: 0x047857, metalness: 0.4, roughness: 0.4 });
+      const pcbMesh = new THREE.Mesh(pcbGeo, pcbMat);
+      pcbMesh.position.set(0, botY + 2.0, 0);
+      pcbGroup.add(pcbMesh);
+
+      // ARM MCU IC
+      const mcuMesh = new THREE.Mesh(new THREE.BoxGeometry(6.0, 1.2, 6.0), boltMat);
+      mcuMesh.position.set(-6.0, botY + 3.2, 0);
+      pcbGroup.add(mcuMesh);
+
+      // 12-Bit Magnetic Sensor IC
+      const encMesh = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.2, 3.5), boltMat);
+      encMesh.position.set(shaftX, botY + 3.2, 0);
+      pcbGroup.add(encMesh);
+
+      compMeshes['pcb_encoder'] = pcbGroup;
+      servoGroup.add(pcbGroup);
+
+      // =================================================================
+      // 09. Bilateral Double-Shear U-Bracket Bridge
+      // =================================================================
+      buildUBracket(bL, W, H, shaftX, topY, botY, snoutH, splineH, 3.6);
+    }
+
+    // -------------------------------------------------------------------
+    // Build U-Bracket Straddle Mount Plate Assembly (Double-Shear Bridge)
+    // -------------------------------------------------------------------
+    function buildUBracket(bL, W, H, shaftX, topY, botY, snoutH, splineH, hornThick) {
+      const uMat = new THREE.MeshStandardMaterial({
+        color: 0x475569, // 6061-T6 CNC Aircraft Aluminum
+        metalness: 0.85,
+        roughness: 0.28,
+        transparent: true,
+        opacity: 0.92
+      });
+      const boltMat = new THREE.MeshStandardMaterial({ color: 0x090d16, metalness: 0.95 });
+
+      const armLen = 42.0;
+      const plateThick = 3.5;
+      const armWidth = 26.0;
+
+      // Top Arm: rigidly bolts to top horn
+      const topArmGeo = new THREE.BoxGeometry(armLen, plateThick, armWidth);
+      const topArm = new THREE.Mesh(topArmGeo, uMat);
+      const topArmY = topY + (H * 0.16) + snoutH + splineH + hornThick + (plateThick / 2);
+      topArm.position.set(shaftX + (armLen / 2) - 8.0, topArmY, 0);
+      uBracketGroup.add(topArm);
+
+      // 4 M2.5 bolts clamping to horn
+      for (let i = 0; i < 4; i++) {
+        const ang = (i / 4) * Math.PI * 2;
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, plateThick + 0.8, 12), boltMat);
+        b.position.set(shaftX + Math.cos(ang) * 7.2, topArmY + (plateThick / 2) + 0.4, Math.sin(ang) * 7.2);
+        uBracketGroup.add(b);
+      }
+
+      // Bottom Arm: supported by coaxial idler ball bearing
+      const botArmGeo = new THREE.BoxGeometry(armLen, plateThick, armWidth);
+      const botArm = new THREE.Mesh(botArmGeo, uMat);
+      const botArmY = botY - (H * 0.12) - 4.5 - (plateThick / 2);
+      botArm.position.set(shaftX + (armLen / 2) - 8.0, botArmY, 0);
+      uBracketGroup.add(botArm);
+
+      // Center Idler Pivot Pin
+      const idlerPin = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, plateThick + 3.0, 16), boltMat);
+      idlerPin.position.set(shaftX, botArmY + 1.0, 0);
+      uBracketGroup.add(idlerPin);
+
+      // Connecting Web (The "U" backplate joining top and bottom arms)
+      const webH = topArmY - botArmY + plateThick;
+      const webGeo = new THREE.BoxGeometry(plateThick, webH, armWidth);
+      const web = new THREE.Mesh(webGeo, uMat);
+      web.position.set(shaftX + armLen - 8.0 - (plateThick / 2), (topArmY + botArmY) / 2, 0);
+      uBracketGroup.add(web);
+
+      uBracketGroup.visible = false;
+    }
+
+    // -------------------------------------------------------------------
+    // Sidebar Component List
+    // -------------------------------------------------------------------
+    function populateCompList() {
+      const listEl = document.getElementById('comp-list');
+      listEl.innerHTML = '';
+
+      SERVO_COMPONENTS.forEach(comp => {
+        const item = document.createElement('div');
+        item.className = 'comp-item' + (comp.id === selectedComponentId ? ' active' : '');
+        item.onclick = () => selectComponent(comp.id);
+
+        item.innerHTML = `
+          <div class="comp-item-head">
+            <span class="comp-name">
+              <span class="comp-dot" style="background:${comp.color}"></span>
+              ${comp.name}
+            </span>
+          </div>
+          <div class="comp-sub">
+            <span>${comp.role}</span>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function selectComponent(id) {
+      selectedComponentId = id;
+      const comp = SERVO_COMPONENTS.find(c => c.id === id);
+      if (!comp) return;
+
+      document.getElementById('insp-title').textContent = comp.name;
+      document.getElementById('insp-layer').textContent = comp.role;
+      document.getElementById('insp-mat').textContent = comp.mat;
+      document.getElementById('insp-tol').textContent = comp.tol;
+      document.getElementById('insp-desc').textContent = comp.desc;
+
+      document.querySelectorAll('.comp-item').forEach((el, idx) => {
+        if (SERVO_COMPONENTS[idx] && SERVO_COMPONENTS[idx].id === id) {
+          el.classList.add('active');
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          el.classList.remove('active');
+        }
+      });
+
+      // Highlight in 3D
+      Object.keys(compMeshes).forEach(cid => {
+        const grp = compMeshes[cid];
+        grp.traverse(child => {
+          if (child.isMesh && child.material) {
+            if (cid === id) {
+              child.material.emissive = new THREE.Color(0xf59e0b);
+              child.material.emissiveIntensity = 0.45;
+            } else {
+              child.material.emissive = new THREE.Color(0x000000);
+              child.material.emissiveIntensity = 0;
+            }
+          }
+        });
+      });
+    }
+
+    // -------------------------------------------------------------------
+    // Interactive Modes and Horn Switcher
+    // -------------------------------------------------------------------
+    function setHornType(type, btn) {
+      currentHornType = type;
+      document.querySelectorAll('#horn-group .ctrl-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      buildServoModel();
+      if (selectedComponentId) selectComponent(selectedComponentId);
+    }
+
+    function setMode(mode, btn) {
+      currentMode = mode;
+      document.querySelectorAll('#mode-group .ctrl-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      applyMode(mode);
+    }
+
+    function applyMode(mode) {
+      const explodeBar = document.getElementById('exploded-bar');
+      isRunningSweep = (mode === 'sweep');
+
+      if (mode === 'exploded') {
+        explodeBar.classList.add('show');
+      } else {
+        explodeBar.classList.remove('show');
+      }
+
+      buildServoModel();
+
+      uBracketGroup.visible = (mode === 'bracket' || mode === 'sweep');
+
+      if (mode === 'exploded') {
+        applyExplosion(explodeDistance);
+      } else if (mode === 'bracket') {
+        resetExplosion();
+        gsapToCam(125, 75, 110, -6, 0, 0);
+      } else if (mode === 'cutaway') {
+        resetExplosion();
+        gsapToCam(100, 85, 105, -6, 5, 0);
+      } else {
+        resetExplosion();
+      }
+
+      if (selectedComponentId) selectComponent(selectedComponentId);
+    }
+
+    function applyExplosion(factor) {
+      explodeDistance = factor;
+      const span = 45 * factor;
+
+      if (compMeshes['top_cap']) compMeshes['top_cap'].position.y = span * 0.9;
+      if (compMeshes['horn_assembly']) compMeshes['horn_assembly'].position.y = span * 1.5;
+      if (compMeshes['gearbox']) compMeshes['gearbox'].position.y = span * 0.55;
+      if (compMeshes['motor']) compMeshes['motor'].position.y = -span * 0.3;
+      if (compMeshes['bottom_cap']) compMeshes['bottom_cap'].position.y = -span * 0.85;
+      if (compMeshes['rear_horn']) compMeshes['rear_horn'].position.y = -span * 1.4;
+      if (compMeshes['pcb_encoder']) compMeshes['pcb_encoder'].position.y = -span * 0.5;
+    }
+
+    function resetExplosion() {
+      Object.keys(compMeshes).forEach(cid => {
+        if (compMeshes[cid]) {
+          compMeshes[cid].position.set(0, 0, 0);
+          compMeshes[cid].rotation.set(0, 0, 0);
+        }
+      });
+    }
+
+    function onExplodeChange(val) {
+      const pct = val / 100;
+      document.getElementById('explode-val').textContent = val + '%';
+      applyExplosion(pct);
+    }
+
+    // -------------------------------------------------------------------
+    // Presets Management
+    // -------------------------------------------------------------------
+    function setSize(size, btn) {
+      currentSize = size;
+      document.querySelectorAll('#size-group .ctrl-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const spec = SERVO_SIZES[size] || SERVO_SIZES.SM3215;
+      document.getElementById('act-name').textContent = spec.name;
+      document.getElementById('act-dims').textContent = spec.dims;
+      document.getElementById('spec-torque').textContent = spec.torque;
+      document.getElementById('spec-speed').textContent = spec.speed;
+      document.getElementById('spec-horn').textContent = spec.horn;
+      document.getElementById('spec-idler').textContent = spec.idler;
+
+      populateCompList();
+      applyMode(currentMode);
+    }
+
+    function zoomCam(delta) {
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      camera.position.addScaledVector(dir, delta * 20);
+    }
+
+    function resetCam() {
+      gsapToCam(135, 95, 145, -6, 0, 0);
+    }
+
+    function gsapToCam(x, y, z, tx, ty, tz) {
+      camera.position.set(x, y, z);
+      controls.target.set(tx, ty, tz);
+      controls.update();
+    }
+
+    // -------------------------------------------------------------------
+    // Animation Loop
+    // -------------------------------------------------------------------
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+
+      if (isRunningSweep) {
+        sweepTime += delta * 2.2;
+        const angle = Math.sin(sweepTime) * (Math.PI / 3); // -60 deg to +60 deg
+        const spec = SERVO_SIZES[currentSize] || SERVO_SIZES.SM3215;
+        const shaftX = spec.shaftOffset;
+
+        if (compMeshes['horn_assembly']) {
+          compMeshes['horn_assembly'].rotation.y = angle;
+          compMeshes['horn_assembly'].position.x = shaftX - (Math.cos(angle) * shaftX);
+          compMeshes['horn_assembly'].position.z = Math.sin(angle) * shaftX;
+        }
+        if (compMeshes['rear_horn']) {
+          compMeshes['rear_horn'].rotation.y = angle;
+          compMeshes['rear_horn'].position.x = shaftX - (Math.cos(angle) * shaftX);
+          compMeshes['rear_horn'].position.z = Math.sin(angle) * shaftX;
+        }
+        if (uBracketGroup && uBracketGroup.visible) {
+          uBracketGroup.rotation.y = angle;
+          uBracketGroup.position.x = shaftX - (Math.cos(angle) * shaftX);
+          uBracketGroup.position.z = Math.sin(angle) * shaftX;
+        }
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.onload = () => {
+      initThree();
+      const hash = window.location.hash.replace('#', '');
+      if (hash && ['exterior', 'cutaway', 'exploded', 'bracket', 'sweep'].includes(hash)) {
+        const btn = document.querySelector(`[onclick*="${hash}"]`);
+        setMode(hash, btn);
+      }
+    };
+  </script>
+</body>
+</html>

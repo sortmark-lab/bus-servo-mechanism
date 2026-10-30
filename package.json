@@ -1,0 +1,26 @@
+{
+  "name": "bus-servo-mechanism",
+  "version": "1.0.0",
+  "description": "Interactive 3D Smart Bus Servo Actuator & Straddle Mount Dual-Shaft Mechanism by SORTMARK",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve -l 3000 ."
+  },
+  "keywords": [
+    "bus-servo",
+    "servo-actuator",
+    "straddle-mount",
+    "dual-shaft-servo",
+    "gear-train",
+    "threejs",
+    "robot-actuator",
+    "sortmark"
+  ],
+  "author": "SORTMARK <contact@sortmark.com> (https://sortmark.com)",
+  "homepage": "https://sortmark.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sortmark-lab/bus-servo-mechanism.git"
+  }
+}
